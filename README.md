@@ -133,13 +133,22 @@ User enters transaction details that are classified as legitimate.
 System confirms the transaction as legitimate and provides insights.  
 ![Legitimate Transaction Analysis](screenshots/ss2.png)
 
-### 3. Fraudulent Transaction Input  
-User enters transaction details that are flagged as fraudulent.  
-![Fraudulent Transaction Input](screenshots/ss3.png)
+### 3. Moderate-Risk Transaction Input  
+User enters transaction details that are flagged as **moderate risk** (suspicious but not confirmed fraud).  
+![Moderate Transaction Input](screenshots/ss3.png)
 
-### 4. Fraudulent Transaction Analysis  
-System detects fraud, provides probability score, and highlights risk factors.  
-![Fraudulent Transaction Analysis](screenshots/ss4.png)
+### 4. Moderate-Risk Transaction Analysis  
+System provides a warning about the transaction's **moderate risk level**.  
+![Moderate Transaction Analysis](screenshots/ss4.png)
+
+### 5. Fraudulent Transaction Input  
+User enters transaction details that are flagged as **high risk (fraudulent)**.  
+![Fraudulent Transaction Input](screenshots/ss5.png)
+
+### 6. Fraudulent Transaction Analysis  
+System detects **fraud**, provides a probability score, and highlights risk factors.  
+![Fraudulent Transaction Analysis](screenshots/ss6.png)
+
 
 ## Credits
 
