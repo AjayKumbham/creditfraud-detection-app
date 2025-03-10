@@ -123,6 +123,23 @@ creditfraud-detection-app/
 ├── requirements.txt   # Dependencies
 └── README.md         # Documentation
 ```
+## Screenshots
+
+### 1. Legitimate Transaction Input  
+User enters transaction details that are classified as legitimate.  
+![Legitimate Transaction Input](screenshots/legitimate_input.png)
+
+### 2. Legitimate Transaction Analysis  
+System confirms the transaction as legitimate and provides insights.  
+![Legitimate Transaction Analysis](screenshots/legitimate_analysis.png)
+
+### 3. Fraudulent Transaction Input  
+User enters transaction details that are flagged as fraudulent.  
+![Fraudulent Transaction Input](screenshots/fraudulent_input.png)
+
+### 4. Fraudulent Transaction Analysis  
+System detects fraud, provides probability score, and highlights risk factors.  
+![Fraudulent Transaction Analysis](screenshots/fraudulent_analysis.png)
 
 ## Credits
 
