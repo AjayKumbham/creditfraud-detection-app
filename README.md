@@ -1,92 +1,34 @@
-# Credit Card Fraud Detection System 🛡️
+# Credit Card Fraud Detection System
 
-A sophisticated machine learning system that detects fraudulent credit card transactions in real-time. Built with Python, Flask, and scikit-learn, this application provides instant risk analysis and detailed insights for each transaction.
+A machine learning-based web application that detects potentially fraudulent credit card transactions using both ML predictions and a risk scoring system.
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Flask](https://img.shields.io/badge/Flask-3.0.2-green.svg)](https://flask.palletsprojects.com/)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4.1-orange.svg)](https://scikit-learn.org/)
+## Features
 
-## 📊 About the Dataset
+- Real-time transaction analysis
+- Hybrid detection approach:
+  - Machine Learning (Random Forest Classifier)
+  - Risk Scoring System
+- Risk factors analyzed:
+  - Transaction amount
+  - Time of transaction
+  - Previous fraud history
+  - Account age
+  - Transaction frequency
+  - Location (Local/Foreign)
+  - Device used
+  - Transaction type
+  - Payment method
 
-This project uses the [Credit Card Fraud Detection dataset](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud) from Kaggle, created by the Machine Learning Group at ULB (Université Libre de Bruxelles). 
+## Tech Stack
 
-**Dataset Characteristics:**
-- Contains real credit card transactions made in September 2013
-- 284,807 transactions, with only 492 frauds (0.172% fraudulent)
-- Highly unbalanced dataset reflecting real-world scenarios
-- Features are numerical and PCA-transformed for confidentiality
-- Time, Amount, and 28 principal components (V1-V28)
+- Python 3.x
+- Flask (Web Framework)
+- scikit-learn (Machine Learning)
+- pandas (Data Processing)
+- HTML/CSS (Frontend)
+- Bootstrap 5 (UI Framework)
 
-**Credit:** 
-Andrea Dal Pozzolo, Olivier Caelen, Reid A. Johnson and Gianluca Bontempi. "Calibrating Probability with Undersampling for Unbalanced Classification." In Symposium on Computational Intelligence and Data Mining (CIDM), IEEE, 2015.
-
-## 🌟 Features
-
-### Real-Time Analysis
-- Instant transaction risk assessment
-- Comprehensive fraud probability scoring
-- Detailed breakdown of risk factors
-- Visual risk indicators and alerts
-
-### Risk Assessment Factors
-- Transaction amount patterns
-- Location-based risk analysis
-- Authentication method evaluation
-- Merchant history analysis
-- Time-based pattern recognition
-- Card usage behavior
-
-### User Interface
-- Clean, professional design
-- Interactive form with detailed inputs
-- Real-time feedback
-- Risk visualization
-- Hidden test scenarios for demonstration
-
-## 🔧 Technical Architecture
-
-### Frontend
-- **HTML5/Bootstrap** for responsive design
-- **JavaScript** for dynamic updates
-- Interactive risk visualization
-- Real-time form validation
-
-### Backend
-- **Flask** web framework
-- **scikit-learn** for ML model
-- **pandas** for data processing
-- **numpy** for numerical operations
-
-### Machine Learning
-- **Algorithm**: Random Forest Classifier
-- **Feature Engineering**: 
-  - Time-based features
-  - Amount normalization
-  - Location risk scoring
-  - Authentication risk assessment
-- **Model Performance**:
-  - High precision for fraud detection
-  - Low false positive rate
-  - Real-time prediction capability
-
-## 🚀 Project Structure
-```
-project/
-├── src/
-│   └── app.py              # Main Flask application
-├── models/                 # Trained models and feature data
-│   ├── fraud_model.pkl     # Trained Random Forest model
-│   ├── fraud_scaler.pkl    # Feature scaler
-│   └── feature_info.pkl    # Feature descriptions
-├── data/                   # Dataset directory
-│   └── creditcard.csv      # Credit card transaction dataset
-├── templates/              # HTML templates
-│   └── index.html         # Main application interface
-├── requirements.txt        # Project dependencies
-└── README.md              # Project documentation
-```
-
-## 🛠️ Installation
+## Installation
 
 1. Clone the repository:
 ```bash
@@ -94,101 +36,78 @@ git clone https://github.com/AjayKumbham/creditfraud-detection-app.git
 cd creditfraud-detection-app
 ```
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
+2. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Download the dataset:
-   - Visit [Kaggle Credit Card Fraud Detection Dataset](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)
-   - Download `creditcard.csv`
-   - Place it in the `data/` directory
-
-## 🎮 Usage
-
-1. Start the Flask server:
+3. Run the application:
 ```bash
 python src/app.py
 ```
 
-2. Open your web browser and navigate to:
+4. Open http://localhost:5000 in your browser
+
+## How It Works
+
+The system uses a hybrid approach for fraud detection:
+
+1. **Machine Learning Model**
+   - Random Forest Classifier
+   - Trained on historical transaction data
+   - Features include transaction amount, time, location, etc.
+   - Class weights adjusted for imbalanced data
+
+2. **Risk Scoring System**
+   - Rule-based scoring mechanism
+   - Assigns risk points based on suspicious patterns
+   - High-risk indicators:
+     - Large transactions (>$10,000)
+     - Late night transactions (12 AM - 5 AM)
+     - Previous fraud history
+     - New accounts (<30 days)
+     - High transaction frequency
+     - Foreign locations
+     - Unusual device usage
+
+3. **Combined Analysis**
+   - ML model prediction
+   - Risk score calculation
+   - Final fraud probability
+   - Detailed risk factor breakdown
+
+## Usage
+
+1. Enter transaction details:
+   - Transaction type
+   - Amount
+   - Time
+   - Device used
+   - Location
+   - Account details
+
+2. Click "Analyze Transaction"
+
+3. View results:
+   - Fraud prediction
+   - Risk probability
+   - Contributing risk factors
+   - Transaction analysis
+
+## Project Structure
+
 ```
-http://localhost:5000
+creditfraud-detection-app/
+├── src/
+│   └── app.py         # Main application code
+├── templates/
+│   └── index.html     # Web interface
+├── data/
+│   └── Fraud Detection Dataset.csv  # Training data
+├── requirements.txt   # Dependencies
+└── README.md         # Documentation
 ```
 
-## 📝 Transaction Risk Levels
+## Contributing
 
-### Low Risk (Green)
-- Local transactions
-- Regular merchant
-- Strong authentication
-- Normal amount range
-- Typical time and location
-
-### Medium Risk (Yellow)
-- Different state/location
-- New merchant
-- Online transaction
-- Higher than usual amount
-- Unusual timing
-
-### High Risk (Red)
-- International location
-- First-time merchant
-- Weak authentication
-- Very high amount
-- Suspicious timing
-
-## 🧪 Test Scenarios
-
-Access test scenarios through the "Test Options" button:
-
-### 1. Low Risk Example
-- Amount: $75
-- Location: Local grocery store
-- Authentication: Chip & PIN
-- Time: 2:00 PM
-- Expected: Low risk, instant approval
-
-### 2. Medium Risk Example
-- Amount: $500
-- Location: Online shopping, different state
-- Authentication: Online verification
-- Time: 8:30 PM
-- Expected: Medium risk, additional verification
-
-### 3. High Risk Example
-- Amount: $2,000
-- Location: International
-- Authentication: Manual entry
-- Time: 3:00 AM
-- Expected: High risk, likely decline
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## 📜 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Dataset provided by the Machine Learning Group at ULB
-- Kaggle for hosting the dataset
-- scikit-learn team for the machine learning tools
-- Flask team for the web framework
-
-## 📧 Contact
-
-For questions or feedback, please open an issue in the GitHub repository.
+Feel free to submit issues and enhancement requests!
