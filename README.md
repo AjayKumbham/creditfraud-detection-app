@@ -2,6 +2,20 @@
 
 A machine learning-based web application that detects potentially fraudulent credit card transactions using a Random Forest Classifier.
 
+## Dataset
+
+This project uses the [Credit Card Fraud Detection Dataset](https://www.kaggle.com/datasets/ranjitmandal/fraud-detection-dataset-csv) from Kaggle, created by Ranjit Mandal. The dataset includes various transaction features that help in identifying fraudulent activities.
+
+**Dataset Features:**
+- Transaction amount
+- Time of transaction
+- Previous fraud history
+- Account age
+- Transaction frequency
+- Location information
+- Device information
+- Transaction type
+
 ## Features
 
 - Real-time transaction analysis
@@ -104,6 +118,11 @@ creditfraud-detection-app/
 ├── requirements.txt   # Dependencies
 └── README.md         # Documentation
 ```
+
+## Credits
+
+- Dataset provided by [Ranjit Mandal on Kaggle](https://www.kaggle.com/datasets/ranjitmandal/fraud-detection-dataset-csv)
+- Built with scikit-learn and Flask
 
 ## Contributing
 
