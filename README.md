@@ -1,23 +1,20 @@
 # Credit Card Fraud Detection System
 
-A machine learning-based web application that detects potentially fraudulent credit card transactions using both ML predictions and a risk scoring system.
+A machine learning-based web application that detects potentially fraudulent credit card transactions using a Random Forest Classifier.
 
 ## Features
 
 - Real-time transaction analysis
-- Hybrid detection approach:
-  - Machine Learning (Random Forest Classifier)
-  - Risk Scoring System
-- Risk factors analyzed:
+- Machine Learning based detection using Random Forest
+- Feature analysis:
   - Transaction amount
   - Time of transaction
   - Previous fraud history
   - Account age
   - Transaction frequency
+  - Transaction type (ATM/Online)
   - Location (Local/Foreign)
   - Device used
-  - Transaction type
-  - Payment method
 
 ## Tech Stack
 
@@ -50,49 +47,49 @@ python src/app.py
 
 ## How It Works
 
-The system uses a hybrid approach for fraud detection:
+The system uses a Random Forest Classifier for fraud detection:
 
-1. **Machine Learning Model**
-   - Random Forest Classifier
-   - Trained on historical transaction data
-   - Features include transaction amount, time, location, etc.
-   - Class weights adjusted for imbalanced data
+1. **Data Preprocessing**
+   - Consistent feature engineering
+   - Standard scaling of numerical features
+   - Binary encoding of categorical features
+   - Missing value handling
 
-2. **Risk Scoring System**
-   - Rule-based scoring mechanism
-   - Assigns risk points based on suspicious patterns
-   - High-risk indicators:
-     - Large transactions (>$10,000)
-     - Late night transactions (12 AM - 5 AM)
-     - Previous fraud history
-     - New accounts (<30 days)
-     - High transaction frequency
-     - Foreign locations
-     - Unusual device usage
+2. **Model Features**
+   - Transaction Amount
+   - Time of Transaction
+   - Previous Fraudulent Transactions
+   - Account Age
+   - Number of Transactions (24h)
+   - ATM Transaction Flag
+   - Foreign Location Flag
+   - Mobile Device Flag
 
-3. **Combined Analysis**
-   - ML model prediction
-   - Risk score calculation
-   - Final fraud probability
-   - Detailed risk factor breakdown
+3. **Model Configuration**
+   - Random Forest with 200 trees
+   - Max depth of 8
+   - Class weight balancing for fraud detection
+   - Feature importance analysis
 
 ## Usage
 
 1. Enter transaction details:
+   - Transaction amount
+   - Time (0-23 hours)
+   - Previous frauds
+   - Account age (days)
+   - Recent transactions
    - Transaction type
-   - Amount
-   - Time
-   - Device used
    - Location
-   - Account details
+   - Device used
 
 2. Click "Analyze Transaction"
 
 3. View results:
    - Fraud prediction
-   - Risk probability
-   - Contributing risk factors
-   - Transaction analysis
+   - Probability score
+   - Feature importance analysis
+   - Transaction details
 
 ## Project Structure
 

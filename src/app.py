@@ -11,66 +11,58 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder='../templates')
 
-# Load data
+# Load and preprocess data
 data = pd.read_csv('data/Fraud Detection Dataset.csv')
 
-# Create risk score function
-def calculate_risk_score(row):
-    score = 0
-    
-    # Amount risk
-    if row['Transaction_Amount'] > 10000: score += 3
-    elif row['Transaction_Amount'] > 5000: score += 2
-    elif row['Transaction_Amount'] > 1000: score += 1
-    
-    # Time risk (0-23)
-    if 0 <= row['Time_of_Transaction'] <= 5: score += 2  # Midnight to 5AM
-    
-    # Previous fraud risk
-    if row['Previous_Fraudulent_Transactions'] > 0: score += 3
-    
-    # Account age risk
-    if row['Account_Age'] < 30: score += 2  # New accounts
-    
-    # Transaction frequency risk
-    if row['Number_of_Transactions_Last_24H'] > 20: score += 2
-    
-    # Location risk
-    if row['Location'] == 'Foreign': score += 2
-    
-    # Device risk for ATM
-    if row['Transaction_Type'] == 'ATM Withdrawal' and row['Device_Used'] == 'Mobile':
-        score += 2
-    
-    return score > 5  # Convert to binary: 1 if high risk, 0 if low risk
+# Define feature columns for consistency
+FEATURE_COLUMNS = [
+    'Transaction_Amount',
+    'Time_of_Transaction',
+    'Previous_Fraudulent_Transactions',
+    'Account_Age',
+    'Number_of_Transactions_Last_24H',
+    'Is_ATM',
+    'Is_Foreign',
+    'Is_Mobile'
+]
 
-# Prepare features with risk scoring
-X = pd.DataFrame({
-    'Amount': data['Transaction_Amount'].fillna(data['Transaction_Amount'].mean()),
-    'Time': data['Time_of_Transaction'].fillna(data['Time_of_Transaction'].mean()),
-    'PrevFraud': data['Previous_Fraudulent_Transactions'] * 3,  # Higher weight
-    'AccountAge': data['Account_Age'],
-    'Transactions24H': data['Number_of_Transactions_Last_24H'],
-    'IsATM': (data['Transaction_Type'] == 'ATM Withdrawal').astype(int) * 2,
-    'IsForeign': (data['Location'] == 'Foreign').astype(int) * 2,
-    'IsMobile': (data['Device_Used'] == 'Mobile').astype(int),
-    'RiskScore': data.apply(calculate_risk_score, axis=1) * 2  # Add risk score as feature
-})
+def preprocess_data(df):
+    """Preprocess data consistently for both training and prediction"""
+    features = pd.DataFrame()
+    
+    # Numerical features - same order as FEATURE_COLUMNS
+    features['Transaction_Amount'] = df['Transaction_Amount'].fillna(df['Transaction_Amount'].mean())
+    features['Time_of_Transaction'] = df['Time_of_Transaction'].fillna(df['Time_of_Transaction'].mean())
+    features['Previous_Fraudulent_Transactions'] = df['Previous_Fraudulent_Transactions']
+    features['Account_Age'] = df['Account_Age']
+    features['Number_of_Transactions_Last_24H'] = df['Number_of_Transactions_Last_24H']
+    
+    # Binary features - same order as FEATURE_COLUMNS
+    features['Is_ATM'] = (df['Transaction_Type'] == 'ATM Withdrawal').astype(int)
+    features['Is_Foreign'] = (df['Location'] == 'Foreign').astype(int)
+    features['Is_Mobile'] = (df['Device_Used'] == 'Mobile').astype(int)
+    
+    return features[FEATURE_COLUMNS]
 
-# Target variable
+# Prepare training data
+X = preprocess_data(data)
 y = data['Fraudulent']
 
-# Train model with stricter parameters
+# Initialize and fit scaler
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
+# Train model
 model = RandomForestClassifier(
     n_estimators=200,
     max_depth=8,
-    class_weight={0: 1, 1: 3},  # Much higher weight on fraud
+    class_weight={0: 1, 1: 3},  # Weight fraudulent cases more heavily
     random_state=42
 )
 model.fit(X_scaled, y)
+
+logger.info("Model training completed")
+logger.info(f"Feature importance: {dict(zip(FEATURE_COLUMNS, model.feature_importances_))}")
 
 @app.route('/')
 def home():
@@ -82,62 +74,36 @@ def predict():
         data = request.get_json()
         logger.info(f"Received data: {data}")
         
-        # Calculate risk score for input
-        input_data = pd.Series({
-            'Transaction_Amount': float(data['amount']),
-            'Time_of_Transaction': float(data['time']),
-            'Previous_Fraudulent_Transactions': int(data['prev_fraud']),
-            'Account_Age': int(data['account_age']),
-            'Number_of_Transactions_Last_24H': int(data['transactions_24h']),
-            'Transaction_Type': data['type'],
-            'Device_Used': data['device'],
-            'Location': data['location']
+        # Create DataFrame with single row for prediction
+        input_df = pd.DataFrame({
+            'Transaction_Amount': [float(data['amount'])],
+            'Time_of_Transaction': [float(data['time'])],
+            'Previous_Fraudulent_Transactions': [int(data['prev_fraud'])],
+            'Account_Age': [int(data['account_age'])],
+            'Number_of_Transactions_Last_24H': [int(data['transactions_24h'])],
+            'Transaction_Type': [data['type']],
+            'Location': [data['location']],
+            'Device_Used': [data['device']]
         })
-        risk_score = calculate_risk_score(input_data)
         
-        # Create feature vector with risk score
-        features = np.array([[
-            float(data['amount']),
-            float(data['time']),
-            int(data['prev_fraud']) * 3,
-            int(data['account_age']),
-            int(data['transactions_24h']),
-            2 if data['type'] == 'ATM Withdrawal' else 0,
-            2 if data['location'] == 'Foreign' else 0,
-            1 if data['device'] == 'Mobile' else 0,
-            risk_score * 2
-        ]])
-        
-        # Scale features
+        # Preprocess input using same function as training
+        features = preprocess_data(input_df)
         features_scaled = scaler.transform(features)
         
-        # Make prediction with risk score adjustment
+        # Get prediction and probability
         prediction = model.predict(features_scaled)[0]
         probability = model.predict_proba(features_scaled)[0][1]
         
-        # Force high probability for very risky transactions
-        if risk_score and probability < 0.7:
-            probability = max(probability, 0.7)
+        # Get feature importance for this prediction
+        feature_importance = dict(zip(FEATURE_COLUMNS, model.feature_importances_))
         
-        logger.info(f"Risk Score: {risk_score}, Prediction: {prediction}, Probability: {probability:.2%}")
-        
-        # Calculate risk factors
-        feature_names = [
-            'Transaction Amount', 
-            'Time of Day', 
-            'Previous Frauds', 
-            'Account Age', 
-            'Transactions in 24H',
-            'ATM Withdrawal',
-            'Foreign Location', 
-            'Mobile Device',
-            'Risk Score'
-        ]
-        importances = dict(zip(feature_names, model.feature_importances_))
+        # Log prediction details
+        logger.info(f"Features: {features.iloc[0].to_dict()}")
+        logger.info(f"Prediction: {prediction}, Probability: {probability:.2%}")
         
         response = {
             'status': 'success',
-            'prediction': 'Fraudulent' if prediction == 1 or risk_score else 'Legitimate',
+            'prediction': 'Fraudulent' if prediction == 1 else 'Legitimate',
             'fraud_probability': f'{probability:.1%}',
             'analysis': {
                 'transaction_details': {
@@ -151,10 +117,9 @@ def predict():
                 'account_analysis': {
                     'age': int(data['account_age']),
                     'prev_fraud': int(data['prev_fraud']),
-                    'transactions_24h': int(data['transactions_24h']),
-                    'risk_score': 'High' if risk_score else 'Low'
+                    'transactions_24h': int(data['transactions_24h'])
                 },
-                'feature_importance': importances
+                'feature_importance': feature_importance
             }
         }
         
