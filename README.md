@@ -1,6 +1,6 @@
 # Credit Card Fraud Detection System
 
-A machine learning-based web application that detects potentially fraudulent credit card transactions using a Random Forest Classifier.
+A hybrid fraud detection system that combines machine learning predictions with rule-based risk scoring for accurate fraud detection.
 
 ## Dataset
 
@@ -19,7 +19,9 @@ This project uses the [Credit Card Fraud Detection Dataset](https://www.kaggle.c
 ## Features
 
 - Real-time transaction analysis
-- Machine Learning based detection using Random Forest
+- Hybrid detection approach:
+  - Machine Learning (Random Forest Classifier)
+  - Rule-based Risk Scoring System
 - Feature analysis:
   - Transaction amount
   - Time of transaction
@@ -61,29 +63,31 @@ python src/app.py
 
 ## How It Works
 
-The system uses a Random Forest Classifier for fraud detection:
+The system uses a hybrid approach combining ML and rule-based detection:
 
-1. **Data Preprocessing**
-   - Consistent feature engineering
+1. **Machine Learning Model**
+   - Random Forest Classifier
    - Standard scaling of numerical features
    - Binary encoding of categorical features
-   - Missing value handling
-
-2. **Model Features**
-   - Transaction Amount
-   - Time of Transaction
-   - Previous Fraudulent Transactions
-   - Account Age
-   - Number of Transactions (24h)
-   - ATM Transaction Flag
-   - Foreign Location Flag
-   - Mobile Device Flag
-
-3. **Model Configuration**
-   - Random Forest with 200 trees
-   - Max depth of 8
-   - Class weight balancing for fraud detection
    - Feature importance analysis
+   - Class weight balancing
+
+2. **Risk Scoring System**
+   - Rule-based scoring mechanism
+   - Assigns risk points based on:
+     - Large transactions (>$10,000)
+     - Late night transactions (12 AM - 5 AM)
+     - Previous fraud history
+     - New accounts (<30 days)
+     - High transaction frequency
+     - Foreign locations
+     - Mobile ATM access
+
+3. **Combined Analysis**
+   - ML model prediction
+   - Risk score calculation
+   - Final fraud probability
+   - Detailed risk factor breakdown
 
 ## Usage
 
@@ -100,10 +104,11 @@ The system uses a Random Forest Classifier for fraud detection:
 2. Click "Analyze Transaction"
 
 3. View results:
-   - Fraud prediction
-   - Probability score
-   - Feature importance analysis
-   - Transaction details
+   - Final fraud prediction
+   - ML model prediction
+   - Risk score analysis
+   - Contributing risk factors
+   - Feature importance
 
 ## Project Structure
 

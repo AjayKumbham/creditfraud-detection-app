@@ -26,6 +26,61 @@ FEATURE_COLUMNS = [
     'Is_Mobile'
 ]
 
+def calculate_risk_score(transaction):
+    """Calculate risk score based on rules"""
+    score = 0
+    reasons = []
+    
+    # Amount risk (max 3 points)
+    if transaction['Transaction_Amount'] > 10000:
+        score += 3
+        reasons.append("Very high amount")
+    elif transaction['Transaction_Amount'] > 5000:
+        score += 2
+        reasons.append("High amount")
+    elif transaction['Transaction_Amount'] > 1000:
+        score += 1
+        reasons.append("Moderate amount")
+    
+    # Time risk (max 2 points)
+    if 0 <= transaction['Time_of_Transaction'] <= 5:
+        score += 2
+        reasons.append("Late night transaction (12AM-5AM)")
+    
+    # Previous fraud risk (max 3 points)
+    if transaction['Previous_Fraudulent_Transactions'] > 0:
+        score += 3
+        reasons.append("Previous fraud history")
+    
+    # Account age risk (max 2 points)
+    if transaction['Account_Age'] < 30:
+        score += 2
+        reasons.append("New account (<30 days)")
+    
+    # Transaction frequency risk (max 2 points)
+    if transaction['Number_of_Transactions_Last_24H'] > 20:
+        score += 2
+        reasons.append("High transaction frequency")
+    
+    # Location risk (max 2 points)
+    if transaction['Location'] == 'Foreign':
+        score += 2
+        reasons.append("Foreign location")
+    
+    # Device risk for ATM (max 2 points)
+    if transaction['Transaction_Type'] == 'ATM Withdrawal' and transaction['Device_Used'] == 'Mobile':
+        score += 2
+        reasons.append("Mobile ATM access")
+    
+    risk_level = "High" if score >= 8 else "Medium" if score >= 4 else "Low"
+    
+    return {
+        'score': score,
+        'max_score': 16,
+        'risk_level': risk_level,
+        'reasons': reasons
+    }
+
 def preprocess_data(df):
     """Preprocess data consistently for both training and prediction"""
     features = pd.DataFrame()
@@ -86,25 +141,34 @@ def predict():
             'Device_Used': [data['device']]
         })
         
-        # Preprocess input using same function as training
+        # Get ML prediction
         features = preprocess_data(input_df)
         features_scaled = scaler.transform(features)
+        ml_prediction = model.predict(features_scaled)[0]
+        ml_probability = model.predict_proba(features_scaled)[0][1]
         
-        # Get prediction and probability
-        prediction = model.predict(features_scaled)[0]
-        probability = model.predict_proba(features_scaled)[0][1]
+        # Get risk score
+        risk_analysis = calculate_risk_score(input_df.iloc[0])
+        is_high_risk = risk_analysis['risk_level'] == "High"
         
-        # Get feature importance for this prediction
+        # Combine both systems
+        final_prediction = "Fraudulent" if (ml_prediction == 1 or is_high_risk) else "Legitimate"
+        
+        # Adjust probability based on risk score
+        final_probability = max(ml_probability, risk_analysis['score'] / risk_analysis['max_score'])
+        
+        # Get feature importance for ML model
         feature_importance = dict(zip(FEATURE_COLUMNS, model.feature_importances_))
         
         # Log prediction details
-        logger.info(f"Features: {features.iloc[0].to_dict()}")
-        logger.info(f"Prediction: {prediction}, Probability: {probability:.2%}")
+        logger.info(f"ML Prediction: {ml_prediction}, Probability: {ml_probability:.2%}")
+        logger.info(f"Risk Level: {risk_analysis['risk_level']}, Score: {risk_analysis['score']}")
+        logger.info(f"Final Prediction: {final_prediction}, Final Probability: {final_probability:.2%}")
         
         response = {
             'status': 'success',
-            'prediction': 'Fraudulent' if prediction == 1 else 'Legitimate',
-            'fraud_probability': f'{probability:.1%}',
+            'prediction': final_prediction,
+            'fraud_probability': f'{final_probability:.1%}',
             'analysis': {
                 'transaction_details': {
                     'type': data['type'],
@@ -119,7 +183,16 @@ def predict():
                     'prev_fraud': int(data['prev_fraud']),
                     'transactions_24h': int(data['transactions_24h'])
                 },
-                'feature_importance': feature_importance
+                'ml_analysis': {
+                    'prediction': 'Fraudulent' if ml_prediction == 1 else 'Legitimate',
+                    'probability': f'{ml_probability:.1%}',
+                    'feature_importance': feature_importance
+                },
+                'risk_analysis': {
+                    'level': risk_analysis['risk_level'],
+                    'score': f'{risk_analysis["score"]}/{risk_analysis["max_score"]}',
+                    'factors': risk_analysis['reasons']
+                }
             }
         }
         
