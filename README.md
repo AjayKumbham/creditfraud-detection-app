@@ -127,19 +127,19 @@ creditfraud-detection-app/
 
 ### 1. Legitimate Transaction Input  
 User enters transaction details that are classified as legitimate.  
-![Legitimate Transaction Input](screenshots/legitimate_input.png)
+![Legitimate Transaction Input](screenshots/ss1.png)
 
 ### 2. Legitimate Transaction Analysis  
 System confirms the transaction as legitimate and provides insights.  
-![Legitimate Transaction Analysis](screenshots/legitimate_analysis.png)
+![Legitimate Transaction Analysis](screenshots/ss2.png)
 
 ### 3. Fraudulent Transaction Input  
 User enters transaction details that are flagged as fraudulent.  
-![Fraudulent Transaction Input](screenshots/fraudulent_input.png)
+![Fraudulent Transaction Input](screenshots/ss3.png)
 
 ### 4. Fraudulent Transaction Analysis  
 System detects fraud, provides probability score, and highlights risk factors.  
-![Fraudulent Transaction Analysis](screenshots/fraudulent_analysis.png)
+![Fraudulent Transaction Analysis](screenshots/ss4.png)
 
 ## Credits
 
