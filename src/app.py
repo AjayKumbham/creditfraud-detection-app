@@ -1,188 +1,76 @@
+import os
 import numpy as np
 import pandas as pd
-from flask import Flask, request, render_template, jsonify
-from sklearn.model_selection import train_test_split
+from flask import Flask, request, jsonify, render_template
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report
-import pickle
-import os
 import logging
-import json
-from datetime import datetime
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder='../templates')
 
-# Define paths
-MODEL_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+# Load data
+data = pd.read_csv('data/Fraud Detection Dataset.csv')
 
-# Risk scoring weights for different factors
-RISK_WEIGHTS = {
-    'location': {
-        'same_city': 0,
-        'same_state': 0.2,
-        'different_state': 0.5,
-        'international': 1.0
-    },
-    'card_present': {
-        'physical': 0,
-        'recurring': 0.2,
-        'online': 0.5,
-        'phone': 0.8
-    },
-    'authentication': {
-        'chip': 0,
-        'online_auth': 0.3,
-        'swipe': 0.5,
-        'manual': 0.8,
-        'none': 1.0
-    },
-    'merchant_frequency': {
-        'frequent': 0,
-        'occasional': 0.3,
-        'rare': 0.7,
-        'first': 1.0
-    },
-    'merchant_type': {
-        'grocery': 0.1,
-        'gas': 0.2,
-        'retail': 0.3,
-        'travel': 0.6,
-        'online': 0.7,
-        'other': 0.8
-    },
-    'last_transaction': {
-        'today': 0.1,
-        'week': 0.3,
-        'month': 0.6,
-        'longer': 0.9
-    }
-}
-
-def calculate_risk_score(transaction_data):
-    """Calculate a risk score based on transaction details"""
-    risk_score = 0
+# Create risk score function
+def calculate_risk_score(row):
+    score = 0
+    
+    # Amount risk
+    if row['Transaction_Amount'] > 10000: score += 3
+    elif row['Transaction_Amount'] > 5000: score += 2
+    elif row['Transaction_Amount'] > 1000: score += 1
+    
+    # Time risk (0-23)
+    if 0 <= row['Time_of_Transaction'] <= 5: score += 2  # Midnight to 5AM
+    
+    # Previous fraud risk
+    if row['Previous_Fraudulent_Transactions'] > 0: score += 3
+    
+    # Account age risk
+    if row['Account_Age'] < 30: score += 2  # New accounts
+    
+    # Transaction frequency risk
+    if row['Number_of_Transactions_Last_24H'] > 20: score += 2
     
     # Location risk
-    risk_score += RISK_WEIGHTS['location'].get(transaction_data.get('location', 'same_city'), 0.5)
+    if row['Location'] == 'Foreign': score += 2
     
-    # Card presence risk
-    risk_score += RISK_WEIGHTS['card_present'].get(transaction_data.get('cardPresent', 'physical'), 0.5)
+    # Device risk for ATM
+    if row['Transaction_Type'] == 'ATM Withdrawal' and row['Device_Used'] == 'Mobile':
+        score += 2
     
-    # Authentication risk
-    risk_score += RISK_WEIGHTS['authentication'].get(transaction_data.get('authenticationType', 'none'), 0.5)
-    
-    # Merchant frequency risk
-    risk_score += RISK_WEIGHTS['merchant_frequency'].get(transaction_data.get('merchantFrequency', 'first'), 0.5)
-    
-    # Merchant type risk
-    risk_score += RISK_WEIGHTS['merchant_type'].get(transaction_data.get('merchantType', 'other'), 0.5)
-    
-    # Last transaction risk
-    risk_score += RISK_WEIGHTS['last_transaction'].get(transaction_data.get('lastTransaction', 'longer'), 0.5)
-    
-    # Normalize risk score to 0-1 range
-    return risk_score / 6.0
+    return score > 5  # Convert to binary: 1 if high risk, 0 if low risk
 
-def load_and_preprocess_data():
-    """Load and preprocess the Credit Card Fraud Detection dataset"""
-    try:
-        data_path = os.path.join(DATA_DIR, 'creditcard.csv')
-        df = pd.read_csv(data_path)
-        X = df.drop('Class', axis=1)
-        y = df['Class']
-        
-        # Save feature names
-        feature_names_path = os.path.join(MODEL_DIR, 'feature_names.pkl')
-        with open(feature_names_path, 'wb') as f:
-            pickle.dump(list(X.columns), f)
-        
-        # Calculate and save feature statistics
-        feature_stats = {
-            'means': X.mean().to_dict(),
-            'stds': X.std().to_dict()
-        }
-        stats_path = os.path.join(MODEL_DIR, 'feature_stats.pkl')
-        with open(stats_path, 'wb') as f:
-            pickle.dump(feature_stats, f)
-        
-        return X, y
-        
-    except Exception as e:
-        logger.error(f"Error loading data: {e}")
-        raise
+# Prepare features with risk scoring
+X = pd.DataFrame({
+    'Amount': data['Transaction_Amount'].fillna(data['Transaction_Amount'].mean()),
+    'Time': data['Time_of_Transaction'].fillna(data['Time_of_Transaction'].mean()),
+    'PrevFraud': data['Previous_Fraudulent_Transactions'] * 3,  # Higher weight
+    'AccountAge': data['Account_Age'],
+    'Transactions24H': data['Number_of_Transactions_Last_24H'],
+    'IsATM': (data['Transaction_Type'] == 'ATM Withdrawal').astype(int) * 2,
+    'IsForeign': (data['Location'] == 'Foreign').astype(int) * 2,
+    'IsMobile': (data['Device_Used'] == 'Mobile').astype(int),
+    'RiskScore': data.apply(calculate_risk_score, axis=1) * 2  # Add risk score as feature
+})
 
-def train_model(X, y):
-    """Train the fraud detection model on real-world data"""
-    try:
-        logger.info("Splitting dataset into training and testing sets...")
-        # Split the data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        
-        logger.info("Scaling features...")
-        # Scale the features
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_test_scaled = scaler.transform(X_test)
-        
-        logger.info("Training Random Forest model...")
-        # Train the model with balanced class weights
-        model = RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
-            random_state=42,
-            class_weight='balanced',
-            n_jobs=-1
-        )
-        model.fit(X_train_scaled, y_train)
-        
-        # Evaluate model
-        logger.info("Evaluating model performance...")
-        y_pred = model.predict(X_test_scaled)
-        
-        # Print classification report
-        report = classification_report(y_test, y_pred)
-        logger.info("Model Performance:\n" + report)
-        
-        return model, scaler
-    
-    except Exception as e:
-        logger.error(f"Error in model training: {e}")
-        raise
+# Target variable
+y = data['Fraudulent']
 
-# Load or train model
-try:
-    model_path = os.path.join(MODEL_DIR, 'fraud_model.pkl')
-    scaler_path = os.path.join(MODEL_DIR, 'fraud_scaler.pkl')
-    feature_info_path = os.path.join(MODEL_DIR, 'feature_info.pkl')
-    
-    if not os.path.exists(model_path):
-        logger.info("No existing model found. Training new model...")
-        X, y = load_and_preprocess_data()
-        model, scaler = train_model(X, y)
-        
-        # Save model and scaler
-        with open(model_path, 'wb') as f:
-            pickle.dump(model, f)
-        with open(scaler_path, 'wb') as f:
-            pickle.dump(scaler, f)
-    else:
-        logger.info("Loading existing model...")
-        with open(model_path, 'rb') as f:
-            model = pickle.load(f)
-        with open(scaler_path, 'rb') as f:
-            scaler = pickle.load(f)
-            
-    logger.info("Model ready for predictions")
-    
-except Exception as e:
-    logger.error(f"Error loading/training model: {e}")
-    raise
+# Train model with stricter parameters
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=8,
+    class_weight={0: 1, 1: 3},  # Much higher weight on fraud
+    random_state=42
+)
+model.fit(X_scaled, y)
 
 @app.route('/')
 def home():
@@ -192,64 +80,86 @@ def home():
 def predict():
     try:
         data = request.get_json()
-        amount = float(data['amount'])
-        time = float(data['time'])
+        logger.info(f"Received data: {data}")
         
-        # Calculate risk score from additional factors
-        risk_score = calculate_risk_score(data)
+        # Calculate risk score for input
+        input_data = pd.Series({
+            'Transaction_Amount': float(data['amount']),
+            'Time_of_Transaction': float(data['time']),
+            'Previous_Fraudulent_Transactions': int(data['prev_fraud']),
+            'Account_Age': int(data['account_age']),
+            'Number_of_Transactions_Last_24H': int(data['transactions_24h']),
+            'Transaction_Type': data['type'],
+            'Device_Used': data['device'],
+            'Location': data['location']
+        })
+        risk_score = calculate_risk_score(input_data)
         
-        # Create feature vector using amount and time
-        features = np.zeros(30)
-        features[0] = time  # Time
-        features[29] = amount  # Amount
-        
-        # Adjust V1-V28 based on risk score and patterns
-        if risk_score > 0.7:  # High risk transaction
-            # Use fraudulent patterns with some randomization
-            for i in range(1, 29):
-                features[i] = np.random.normal(0, 1)
-        elif risk_score > 0.4:  # Medium risk
-            # Mix of legitimate and fraudulent patterns
-            for i in range(1, 29):
-                features[i] = np.random.normal(0, 1)
-        else:  # Low risk
-            # Use legitimate patterns with some randomization
-            for i in range(1, 29):
-                features[i] = np.random.normal(0, 1)
+        # Create feature vector with risk score
+        features = np.array([[
+            float(data['amount']),
+            float(data['time']),
+            int(data['prev_fraud']) * 3,
+            int(data['account_age']),
+            int(data['transactions_24h']),
+            2 if data['type'] == 'ATM Withdrawal' else 0,
+            2 if data['location'] == 'Foreign' else 0,
+            1 if data['device'] == 'Mobile' else 0,
+            risk_score * 2
+        ]])
         
         # Scale features
-        features_scaled = scaler.transform(features.reshape(1, -1))
+        features_scaled = scaler.transform(features)
         
-        # Make prediction
+        # Make prediction with risk score adjustment
         prediction = model.predict(features_scaled)[0]
         probability = model.predict_proba(features_scaled)[0][1]
         
-        # Prepare detailed analysis
-        hour = time / 3600
+        # Force high probability for very risky transactions
+        if risk_score and probability < 0.7:
+            probability = max(probability, 0.7)
+        
+        logger.info(f"Risk Score: {risk_score}, Prediction: {prediction}, Probability: {probability:.2%}")
+        
+        # Calculate risk factors
+        feature_names = [
+            'Transaction Amount', 
+            'Time of Day', 
+            'Previous Frauds', 
+            'Account Age', 
+            'Transactions in 24H',
+            'ATM Withdrawal',
+            'Foreign Location', 
+            'Mobile Device',
+            'Risk Score'
+        ]
+        importances = dict(zip(feature_names, model.feature_importances_))
+        
         response = {
-            'prediction': 'Fraudulent' if prediction == 1 else 'Legitimate',
+            'status': 'success',
+            'prediction': 'Fraudulent' if prediction == 1 or risk_score else 'Legitimate',
             'fraud_probability': f'{probability:.1%}',
             'analysis': {
-                'amount_analysis': {
-                    'value': amount,
-                    'avg_legitimate': 0,
-                    'avg_fraudulent': 0
+                'transaction_details': {
+                    'type': data['type'],
+                    'amount': float(data['amount']),
+                    'time': float(data['time']),
+                    'device': data['device'],
+                    'location': data['location'],
+                    'payment_method': data['payment_method']
                 },
-                'time_analysis': {
-                    'value': time,
-                    'hour': f"{hour:.1f}"
+                'account_analysis': {
+                    'age': int(data['account_age']),
+                    'prev_fraud': int(data['prev_fraud']),
+                    'transactions_24h': int(data['transactions_24h']),
+                    'risk_score': 'High' if risk_score else 'Low'
                 },
-                'risk_analysis': {
-                    'overall_risk_score': f"{risk_score:.2f}",
-                    'location_risk': RISK_WEIGHTS['location'].get(data.get('location', 'same_city'), 0),
-                    'auth_risk': RISK_WEIGHTS['authentication'].get(data.get('authenticationType', 'none'), 0),
-                    'merchant_risk': RISK_WEIGHTS['merchant_type'].get(data.get('merchantType', 'other'), 0)
-                }
-            },
-            'status': 'success'
+                'feature_importance': importances
+            }
         }
         
         return jsonify(response)
+        
     except Exception as e:
         logger.error(f"Error in prediction: {str(e)}")
         return jsonify({
@@ -258,7 +168,4 @@ def predict():
         })
 
 if __name__ == '__main__':
-    try:
-        app.run(host='localhost', port=5000)
-    except Exception as e:
-        print(f"Server error: {e}")
+    app.run(host='localhost', port=5000)
