@@ -1,10 +1,10 @@
-# Credit Card Fraud Detection System
+# Transaction Fraud Detection System
 
 A hybrid fraud detection system that combines machine learning predictions with rule-based risk scoring for accurate fraud detection.
 
 ## Dataset
 
-This project uses the [Credit Card Fraud Detection Dataset](https://www.kaggle.com/datasets/ranjitmandal/fraud-detection-dataset-csv) from Kaggle, created by Ranjit Mandal. The dataset includes various transaction features that help in identifying fraudulent activities.
+This project uses the [Transaction Fraud Detection Dataset](https://www.kaggle.com/datasets/ranjitmandal/fraud-detection-dataset-csv) from Kaggle, created by Ranjit Mandal. The dataset includes various transaction features that help in identifying fraudulent activities.
 
 **Dataset Features:**
 - Transaction amount
@@ -45,8 +45,8 @@ This project uses the [Credit Card Fraud Detection Dataset](https://www.kaggle.c
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/AjayKumbham/creditfraud-detection-app.git
-cd creditfraud-detection-app
+git clone https://github.com/AjayKumbham/fraud-detection-app.git
+cd fraud-detection-app
 ```
 
 2. Install dependencies:
